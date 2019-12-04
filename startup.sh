@@ -3,6 +3,25 @@
 RUN_USER=${RUN_USER:=tomcat}
 RUN_GROUP=${RUN_GROUP:=tomcat}
 
+#run the mysql_safe command to start mysqld service
+exec mysqld_safe &
+
+#check for the mysql status
+mysql_status=$(mysqladmin --user="$DATABASE_ROOT_USERNAME" --password="$DATABASE_ROOT_PASSWORD" status)
+
+#wait for the mysql to completely start before creating the Jamf Database, username and password
+while [ $? == 1 ]; do
+        echo "mysql not started yet"
+        mysql_status=$(mysqladmin --user="$DATABASE_ROOT_USERNAME" --password="$DATABASE_ROOT_PASSWORD" status)
+done
+
+#Create database for Jamf Pro
+mysql --user="$DATABASE_ROOT_USERNAME" --password="$DATABASE_ROOT_PASSWORD" --execute="CREATE DATABASE $DATABASE_NAME;"
+#Create database user
+mysql --user="$DATABASE_ROOT_USERNAME" --password="$DATABASE_ROOT_PASSWORD" --execute="CREATE USER '$DATABASE_USERNAME'@'localhost' IDENTIFIED BY '$DATABASE_PASSWORD';"
+#Grant access for jamf pro user to the jamf pro database
+mysql --user="$DATABASE_ROOT_USERNAME" --password="$DATABASE_ROOT_PASSWORD" --execute="GRANT ALL ON $DATABASE_NAME.* TO '$DATABASE_USERNAME'@'localhost';"
+
 source /configuration.sh
 
 if [ $? -gt 0 ]; then
